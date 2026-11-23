@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<title>Contabilidad - Pre-Balance</title>
+<style>
+  :root {
+    --bg: #0b0f17;
+    --surface: #111827;
+    --surface-2: #1f2937;
+    --header: #0f172a;
+    --nav: #1e293b;
+    --border: #334155;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --primary: #3b82f6;
+    --primary-hover: #2563eb;
+    --accent: #fbbf24;
+    --ok: #22c55e;
+    --ok-bg: rgba(34, 197, 94, 0.16);
+    --bad: #ef4444;
+    --bad-bg: rgba(239, 68, 68, 0.16);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; min-height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text); font-size: 15px;
+    -webkit-user-select: none; user-select: none; overscroll-behavior: none;
+  }
+  body {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right)
+             env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  header {
+    background: var(--header); color: var(--text); padding: 14px 16px;
+    text-align: center; font-weight: 700; font-size: 17px;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .tabs {
+    display: flex; overflow-x: auto; background: var(--nav);
+    border-bottom: 1px solid var(--border);
+    scrollbar-width: none; position: sticky; top: 49px; z-index: 9;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex: 0 0 auto; padding: 12px 14px; color: var(--muted);
+    font-size: 13px; cursor: pointer; white-space: nowrap;
+    border-bottom: 3px solid transparent; transition: color 0.15s;
+  }
+  .tab.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+  main { padding: 14px; padding-bottom: 48px; max-width: 960px; margin: 0 auto; }
+  section { display: none; }
+  section.active { display: block; }
+  h2 { font-size: 16px; margin: 0 0 12px; color: #93c5fd; }
+  h3 { font-size: 14px; margin: 16px 0 8px; color: var(--text); }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 14px;
+    margin-bottom: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.25);
+  }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  input, select {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+    border-radius: 10px; font-size: 15px; margin-bottom: 10px;
+    background: var(--surface-2); color: var(--text);
+    -webkit-user-select: text; user-select: text;
+  }
+  input::placeholder { color: #64748b; }
+  input:focus, select:focus { outline: 2px solid var(--primary); border-color: transparent; }
+  .row { display: flex; gap: 8px; }
+  .row > div { flex: 1; }
+  button {
+    background: var(--primary); color: #ffffff; border: none; border-radius: 10px;
+    padding: 12px; font-size: 15px; font-weight: 600; width: 100%;
+    cursor: pointer; margin-top: 4px; transition: background 0.15s;
+  }
+  button:active { background: var(--primary-hover); }
+  button.sec { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+  button.sec:active { background: #334155; }
+  button.ok-btn { background: #16a34a; color: #ffffff; }
+  button.ok-btn:active { background: #15803d; }
+  button.danger { background: #dc2626; }
+  button.danger:active { background: #b91c1c; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 8px 6px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { background: var(--surface-2); color: var(--muted); font-size: 12px; font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pos { color: var(--ok); font-weight: 600; }
+  .neg { color: var(--bad); font-weight: 600; }
+  .total { font-weight: 700; background: var(--surface-2); }
+  .vacio { text-align: center; color: var(--muted); padding: 20px; font-size: 13px; }
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; }
+  .pill.ok { background: var(--ok-bg); color: var(--ok); }
+  .pill.bad { background: var(--bad-bg); color: var(--bad); }
+  .del {
+    background: none; border: none; color: var(--bad); font-size: 18px;
+    padding: 0 6px; width: auto; margin: 0; cursor: pointer; font-weight: 700;
+  }
+  .hint { font-size: 12px; color: var(--muted); line-height: 1.45; margin: 6px 0 10px; }
+  .scroll-pre { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table.pre { font-size: 11px; min-width: 960px; }
+  table.pre th, table.pre td { padding: 6px 5px; white-space: nowrap; }
+  table.pre th { font-size: 10px; text-align: center; vertical-align: middle; }
+  table.pre td.num { text-align: right; }
+  .col-sep { border-left: 2px solid #475569; }
+</style>
+</head>
+<body>
+
+<header>📊 Contabilidad · Pre-Balance</header>
+
+<div class="tabs" id="tabs">
+  <div class="tab active" data-t="ini">1. Saldos</div>
+  <div class="tab" data-t="caja">2. Arqueo</div>
+  <div class="tab" data-t="banco">3. Banco</div>
+  <div class="tab" data-t="deud">4. Deudores</div>
+  <div class="tab" data-t="dev">5. Deveng.</div>
+  <div class="tab" data-t="pre">6. Pre-Balance</div>
+</div>
+
+<main>
+<!-- 1. SALDOS INICIALES -->
+<section id="ini" class="active">
+  <h2>Saldos Iniciales</h2>
+  <div class="card">
+    <p class="hint">
+      1) Cargá primero las cuentas del inventario inicial.<br>
+      2) Tocá <strong>Cerrar carga inicial y calcular Capital</strong>: se crea <strong>Capital</strong> al final con <code>Debe - Haber</code> (Patrimonio Neto).<br>
+      3) Las cuentas que agregues después quedarán <strong>debajo de Capital</strong> sin modificar su monto.
+    </p>
+    <label for="iniCuenta">Cuenta</label>
+    <input id="iniCuenta" placeholder="Ej: Caja">
+    <label for="iniTipo">Tipo de cuenta</label>
+    <select id="iniTipo">
+      <option value="activo">Activo</option>
+      <option value="pasivo">Pasivo</option>
+      <option value="pn">Patrimonio Neto</option>
+      <option value="regA">Reguladora de Activo</option>
+      <option value="regP">Reguladora de Pasivo</option>
+      <option value="resN">Resultado Negativo (Gasto)</option>
+      <option value="resP">Resultado Positivo (Ganancia)</option>
+    </select>
+    <div class="row">
+      <div>
+        <label for="iniDebe">Debe ($)</label>
+        <input id="iniDebe" type="number" step="0.01" placeholder="0.00">
+      </div>
+      <div>
+        <label for="iniHaber">Haber ($)</label>
+        <input id="iniHaber" type="number" step="0.01" placeholder="0.00">
+      </div>
+    </div>
+    <button onclick="addIni()">+ Agregar cuenta</button>
+  </div>
+
+  <div class="card">
+    <label for="iniCapitalNombre">Cuenta de Capital</label>
+    <input id="iniCapitalNombre" value="Capital" placeholder="Ej: Capital" oninput="guardarNombreCapital()">
+    <div class="row">
+      <div>
+        <button class="ok-btn" onclick="fijarCapital()">✓ Cerrar carga inicial y calcular Capital</button>
+      </div>
+      <div id="wrapReabrirCap" style="display:none;">
+        <button class="sec" onclick="reabrirCapital()">↺ Recalcular / liberar Capital</button>
+      </div>
+    </div>
+    <div id="resCapitalAuto" class="hint" style="margin-top:8px;"></div>
+  </div>
+
+  <div class="card">
+    <table id="tIni">
+      <thead><tr><th>Cuenta</th><th>Tipo</th><th class="num">Debe</th><th class="num">Haber</th><th></th></tr></thead>
+      <tbody></tbody>
+      <tfoot></tfoot>
+    </table>
+  </div>
+</section>
+
+<!-- 2. ARQUEO DE CAJA -->
+<section id="caja">
+  <h2>Arqueo de Caja</h2>
+  <div class="card">
+    <p class="hint">Compará el saldo según libros con el conteo físico. Si la cuenta ya está cargada en Saldos Iniciales, no se duplica.</p>
+    <label for="cajaNombre">Nombre de la cuenta</label>
+    <input id="cajaNombre" value="Caja" placeholder="Ej: Caja">
+    <label for="cajaTipo">Tipo de cuenta</label>
+    <select id="cajaTipo">
+      <option value="activo">Activo</option>
+      <option value="pasivo">Pasivo</option>
+      <option value="pn">Patrimonio Neto</option>
+      <option value="regA">Reguladora de Activo</option>
+      <option value="regP">Reguladora de Pasivo</option>
+      <option value="resN">Resultado Negativo (Gasto)</option>
+      <option value="resP">Resultado Positivo (Ganancia)</option>
+    </select>
+    <label for="cajaLibro">Saldo según Libros ($)</label>
+    <input id="cajaLibro" type="number" step="0.01" placeholder="0.00">
+    <label for="cajaFisico">Conteo Físico ($)</label>
+    <input id="cajaFisico" type="number" step="0.01" placeholder="0.00">
+    <button onclick="calcularCaja()">Calcular y guardar arqueo</button>
+    <div id="resCaja" style="margin-top:12px;"></div>
+  </div>
+</section>
+
+<!-- 3. CONCILIACIÓN BANCARIA -->
+<section id="banco">
+  <h2>Conciliación Bancaria</h2>
+  <div class="card">
+    <label for="bancoNombre">Nombre de la cuenta bancaria</label>
+    <input id="bancoNombre" value="Banco" placeholder="Ej: Banco Nación c/c">
+    <label for="bancoTipoCuenta">Tipo de cuenta</label>
+    <select id="bancoTipoCuenta">
+      <option value="activo">Activo</option>
+      <option value="pasivo">Pasivo</option>
+      <option value="pn">Patrimonio Neto</option>
+      <option value="regA">Reguladora de Activo</option>
+      <option value="regP">Reguladora de Pasivo</option>
+      <option value="resN">Resultado Negativo (Gasto)</option>
+      <option value="resP">Resultado Positivo (Ganancia)</option>
+    </select>
+    <div class="row">
+      <div>
+        <label for="bancoSaldoBanco">Saldo según Banco ($)</label>
+        <input id="bancoSaldoBanco" type="number" step="0.01" placeholder="0.00">
+      </div>
+      <div>
+        <label for="bancoSaldoLibro">Saldo según Libros ($)</label>
+        <input id="bancoSaldoLibro" type="number" step="0.01" placeholder="0.00">
+      </div>
+    </div>
+    <button class="sec" onclick="guardarSaldosBanco()">Guardar saldos base</button>
+
+    <h3>Partidas conciliatorias</h3>
+    <label for="bancoConcepto">Concepto</label>
+    <input id="bancoConcepto" placeholder="Ej: Cheque en tránsito / Gastos bancarios">
+    <div class="row">
+      <div>
+        <label for="bancoMonto">Monto (+ o -) ($)</label>
+        <input id="bancoMonto" type="number" step="0.01" placeholder="0.00">
+      </div>
+      <div>
+        <label for="bancoTipo">Ajusta</label>
+        <select id="bancoTipo">
+          <option value="banco">Al saldo del banco</option>
+          <option value="libro">Al saldo de libros</option>
+        </select>
+      </div>
+    </div>
+    <button onclick="addBanco()">+ Agregar partida</button>
+  </div>
+  <div class="card">
+    <table id="tBanco">
+      <thead><tr><th>Concepto</th><th class="num">Monto</th><th>Ajusta</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div id="resBanco" style="margin-top:12px;"></div>
+  </div>
+</section>
+
+<!-- 4. DEPURACIÓN DE DEUDORES -->
+<section id="deud">
+  <h2>Depuración de Deudores</h2>
+  <div class="card">
+    <label for="deudCuentaSel">Cuenta</label>
+    <select id="deudCuentaSel">
+      <option value="ventas">Deudores por Ventas</option>
+      <option value="morosos">Deudores Morosos</option>
+      <option value="judicial">Deudores en Gestión Judicial</option>
+      <option value="incobrables">Deudores Incobrables</option>
+      <option value="prevision">Previsión para Deudores Incobrables</option>
+    </select>
+
+    <label for="deudTipoCuenta">Tipo de cuenta</label>
+    <select id="deudTipoCuenta">
+      <option value="activo">Activo</option>
+      <option value="pasivo">Pasivo</option>
+      <option value="pn">Patrimonio Neto</option>
+      <option value="regA">Reguladora de Activo</option>
+      <option value="regP">Reguladora de Pasivo</option>
+      <option value="resN">Resultado Negativo (Gasto)</option>
+      <option value="resP">Resultado Positivo (Ganancia)</option>
+    </select>
+
+    <label for="deudSaldo">Saldo ($)</label>
+    <input id="deudSaldo" type="number" step="0.01" placeholder="0.00">
+
+    <button onclick="guardarDeud()">💾 Guardar saldo de esta cuenta</button>
+  </div>
+
+  <div class="card">
+    <table id="tDeud">
+      <thead><tr><th>Cuenta</th><th>Tipo</th><th class="num">Saldo</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 5. DEVENGAMIENTOS -->
+<section id="dev">
+  <h2>Devengamiento de Intereses y Gastos Pagados por Adelantado</h2>
+  <div class="card">
+    <label for="devTipo">Tipo</label>
+    <select id="devTipo">
+      <option value="interes">Intereses (a pagar / a ganar)</option>
+      <option value="gasto">Gasto pagado por adelantado</option>
+    </select>
+    <label for="devTipoCuenta">Tipo de cuenta contrapartida</label>
+    <select id="devTipoCuenta">
+      <option value="activo">Activo</option>
+      <option value="pasivo" selected>Pasivo</option>
+      <option value="pn">Patrimonio Neto</option>
+      <option value="regA">Reguladora de Activo</option>
+      <option value="regP">Reguladora de Pasivo</option>
+      <option value="resN">Resultado Negativo (Gasto)</option>
+      <option value="resP">Resultado Positivo (Ganancia)</option>
+    </select>
+    <label for="devConcepto">Concepto</label>
+    <input id="devConcepto" placeholder="Ej: Intereses préstamo">
+    <label for="devMonto">Monto a devengar ($)</label>
+    <input id="devMonto" type="number" step="0.01" placeholder="0.00">
+    <button onclick="addDev()">+ Agregar devengamiento</button>
+  </div>
+  <div class="card">
+    <table id="tDev">
+      <thead><tr><th>Concepto</th><th>Tipo</th><th class="num">Monto</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div id="resDev" style="margin-top:12px;"></div>
+  </div>
+</section>
+
+<!-- 6. HOJA DE PRE-BALANCE -->
+<section id="pre">
+  <h2>Hoja de Pre-Balance</h2>
+  <div class="card">
+    <div class="scroll-pre" id="preContenido"></div>
+  </div>
+  <div class="card">
+    <button class="danger" onclick="borrarTodo()">🗑️ Borrar todos los datos</button>
+  </div>
+</section>
+
+</main>
+<script>
+/* ============ ESTADO ============ */
+const KEY = 'contab_prebalance_v7';
+const TIPOS = {
+  activo: 'Activo', pasivo: 'Pasivo', pn: 'Patrimonio Neto',
+  regA: 'Reguladora de Activo', regP: 'Reguladora de Pasivo',
+  resN: 'Resultado Negativo', resP: 'Resultado Positivo'
+};
+
+function estadoInicial() {
+  return {
+    saldos: [],
+    capitalNombre: 'Capital',
+    capitalCerrado: false,
+    caja: { nombre: 'Caja', tipo: 'activo', libro: 0, fisico: 0 },
+    banco: { nombre: 'Banco', tipo: 'activo', saldoBanco: 0, saldoLibro: 0, partidas: [] },
+    deud: {
+      cuentas: {
+        ventas:      { nombre: 'Deudores por Ventas',                 tipo: 'activo', saldo: 0 },
+        morosos:     { nombre: 'Deudores Morosos',                    tipo: 'activo', saldo: 0 },
+        judicial:    { nombre: 'Deudores en Gestión Judicial',        tipo: 'activo', saldo: 0 },
+        incobrables: { nombre: 'Deudores Incobrables',                tipo: 'resN',   saldo: 0 },
+        prevision:   { nombre: 'Previsión para Deudores Incobrables', tipo: 'regA',   saldo: 0 }
+      }
+    },
+    dev: { items: [] }
+  };
+}
+
+let S = estadoInicial();
+
+function cargar() {
+  try {
+    const r = localStorage.getItem(KEY) || localStorage.getItem('contab_prebalance_v6') || localStorage.getItem('contab_prebalance_v5');
+    if (r) {
+      const parsed = JSON.parse(r);
+      S = Object.assign(estadoInicial(), parsed);
+      if (!S.capitalNombre) S.capitalNombre = 'Capital';
+      if (!S.banco.nombre) S.banco.nombre = 'Banco';
+    }
+  } catch (e) {}
+}
+function guardar() { localStorage.setItem(KEY, JSON.stringify(S)); }
+function num(v) { const n = parseFloat(v); return isNaN(n) ? 0 : n; }
+function esc(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+function fmt(n) {
+  if (!n || Math.abs(n) < 0.005) return '';
+  return n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fmt0(n) {
+  if (!n || Math.abs(n) < 0.005) return '0,00';
+  return n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/* ============ TABS ============ */
+document.querySelectorAll('.tab').forEach(t => {
+  t.onclick = () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('section').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById(t.dataset.t).classList.add('active');
+    if (t.dataset.t === 'pre') renderPre();
+  };
+});
+
+/* ============ 1. SALDOS ============ */
+function guardarNombreCapital() {
+  const inp = document.getElementById('iniCapitalNombre');
+  const nuevoNombre = (inp && inp.value.trim()) || 'Capital';
+  S.capitalNombre = nuevoNombre;
+  const filaCap = S.saldos.find(s => s.esCapital);
+  if (filaCap) filaCap.cuenta = nuevoNombre;
+  guardar();
+  renderIni();
+}
+
+function calcularDiferenciaPreviaACapital() {
+  const idxCap = S.saldos.findIndex(s => s.esCapital);
+  const previas = idxCap === -1
+    ? S.saldos.filter(s => !s.esCapital)
+    : S.saldos.slice(0, idxCap).filter(s => !s.esCapital);
+  const debeBase = previas.reduce((a, s) => a + num(s.debe), 0);
+  const haberBase = previas.reduce((a, s) => a + num(s.haber), 0);
+  const diff = debeBase - haberBase;
+  return {
+    debe: diff < -0.005 ? Math.abs(diff) : 0,
+    haber: diff > 0.005 ? diff : 0,
+    diff
+  };
+}
+
+function fijarCapital() {
+  const nombre = (S.capitalNombre || 'Capital').trim() || 'Capital';
+  // Quitar capital previo si existía para ponerlo al final de lo cargado hasta ahora
+  S.saldos = S.saldos.filter(s => !s.esCapital);
+  const calc = calcularDiferenciaPreviaACapital();
+  S.saldos.push({
+    cuenta: nombre,
+    tipo: 'pn',
+    debe: calc.debe,
+    haber: calc.haber,
+    esCapital: true
+  });
+  S.capitalCerrado = true;
+  guardar();
+  renderIni();
+}
+
+function reabrirCapital() {
+  S.saldos = S.saldos.filter(s => !s.esCapital);
+  S.capitalCerrado = false;
+  guardar();
+  renderIni();
+}
+
+function addIni() {
+  const c = document.getElementById('iniCuenta').value.trim();
+  const tipo = document.getElementById('iniTipo').value;
+  const d = num(document.getElementById('iniDebe').value);
+  const h = num(document.getElementById('iniHaber').value);
+  if (!c) return alert('Ingresá el nombre de la cuenta');
+  if (d === 0 && h === 0) return alert('Ingresá Debe o Haber');
+
+  // Se inserta siempre al final: si Capital ya fue cerrado, las nuevas cuentas quedan debajo de Capital
+  S.saldos.push({ cuenta: c, tipo, debe: d, haber: h, esCapital: false });
+
+  document.getElementById('iniCuenta').value = '';
+  document.getElementById('iniDebe').value = '';
+  document.getElementById('iniHaber').value = '';
+  guardar();
+  renderIni();
+}
+
+function delIni(i) {
+  const item = S.saldos[i];
+  if (item && item.esCapital) {
+    S.capitalCerrado = false;
+  }
+  S.saldos.splice(i, 1);
+  // Si Capital sigue cerrado, actualizamos su monto solo en base a las cuentas anteriores a Capital
+  if (S.capitalCerrado) {
+    const idxCap = S.saldos.findIndex(s => s.esCapital);
+    if (idxCap !== -1) {
+      const calc = calcularDiferenciaPreviaACapital();
+      S.saldos[idxCap].debe = calc.debe;
+      S.saldos[idxCap].haber = calc.haber;
+    }
+  }
+  guardar();
+  renderIni();
+}
+
+function renderIni() {
+  const capInp = document.getElementById('iniCapitalNombre');
+  if (capInp && document.activeElement !== capInp) {
+    capInp.value = S.capitalNombre || 'Capital';
+  }
+
+  const wrapReabrir = document.getElementById('wrapReabrirCap');
+  if (wrapReabrir) {
+    wrapReabrir.style.display = S.capitalCerrado ? 'block' : 'none';
+  }
+
+  const resCap = document.getElementById('resCapitalAuto');
+  const filaCapExistente = S.saldos.find(s => s.esCapital);
+  if (resCap) {
+    if (filaCapExistente) {
+      resCap.innerHTML =
+        '<strong>' + esc(filaCapExistente.cuenta) + '</strong> fijado en la planilla: ' +
+        (filaCapExistente.haber > 0
+          ? '<span class="pos">Haber $' + fmt0(filaCapExistente.haber) + '</span>'
+          : '<span class="neg">Debe $' + fmt0(filaCapExistente.debe) + '</span>') +
+        ' · Las cuentas nuevas se agregan debajo.';
+    } else {
+      const preview = calcularDiferenciaPreviaACapital();
+      if (Math.abs(preview.diff) < 0.005) {
+        resCap.innerHTML = 'Cargá tus cuentas iniciales y luego tocá <strong>Cerrar carga inicial y calcular Capital</strong>.';
+      } else {
+        resCap.innerHTML =
+          'Vista previa de <strong>' + esc(S.capitalNombre || 'Capital') + '</strong> al cerrar: ' +
+          (preview.haber > 0
+            ? '<span class="pos">Haber $' + fmt0(preview.haber) + '</span>'
+            : '<span class="neg">Debe $' + fmt0(preview.debe) + '</span>');
+      }
+    }
+  }
+
+  const tb = document.querySelector('#tIni tbody');
+  tb.innerHTML = S.saldos.map((s, i) => `
+    <tr${s.esCapital ? ' style="background:rgba(59,130,246,0.12);font-weight:600;"' : ''}>
+      <td>${esc(s.cuenta)}${s.esCapital ? ' <span style="color:#93c5fd;font-size:11px">(Capital)</span>' : ''}</td>
+      <td>${esc(TIPOS[s.tipo] || '')}</td>
+      <td class="num">${fmt(s.debe)}</td>
+      <td class="num">${fmt(s.haber)}</td>
+      <td><button class="del" onclick="delIni(${i})">×</button></td>
+    </tr>`).join('') ||
+    '<tr><td colspan="5" class="vacio">Sin cuentas cargadas</td></tr>';
+
+  const td = S.saldos.reduce((a, s) => a + num(s.debe), 0);
+  const th = S.saldos.reduce((a, s) => a + num(s.haber), 0);
+  document.querySelector('#tIni tfoot').innerHTML = `
+    <tr class="total"><td colspan="2">Totales</td>
+    <td class="num">${fmt(td)}</td><td class="num">${fmt(th)}</td><td></td></tr>
+    <tr><td colspan="5" style="text-align:right;font-size:12px">
+      ${Math.abs(td - th) < 0.01 ? '<span class="pill ok">✓ Debe = Haber</span>' : '<span class="pill bad">✗ Diferencia: ' + fmt0(td - th) + '</span>'}
+    </td></tr>`;
+}
+
+/* ============ 2. CAJA ============ */
+function calcularCaja() {
+  const nombre = document.getElementById('cajaNombre').value.trim() || 'Caja';
+  const tipo = document.getElementById('cajaTipo').value;
+  const l = num(document.getElementById('cajaLibro').value);
+  const f = num(document.getElementById('cajaFisico').value);
+  S.caja = { nombre, tipo, libro: l, fisico: f };
+  guardar();
+  mostrarResumenCaja();
+}
+function mostrarResumenCaja() {
+  const { nombre, libro: l, fisico: f } = S.caja;
+  if (l === 0 && f === 0) {
+    document.getElementById('resCaja').innerHTML = '';
+    return;
+  }
+  const dif = f - l;
+  const estado = Math.abs(dif) < 0.005 ? 'ok' : dif < 0 ? 'faltante' : 'sobrante';
+  document.getElementById('resCaja').innerHTML = `
+    <table>
+      <tr><th>Cuenta</th><td>${esc(nombre)}</td></tr>
+      <tr><th>Saldo libros</th><td class="num">${fmt0(l)}</td></tr>
+      <tr><th>Conteo físico</th><td class="num">${fmt0(f)}</td></tr>
+      <tr class="total"><td>Diferencia</td>
+        <td class="num ${dif < -0.005 ? 'neg' : dif > 0.005 ? 'pos' : ''}">${fmt0(dif)}</td></tr>
+      <tr><td colspan="2" style="font-size:12px;color:var(--muted)">
+        ${estado === 'ok' ? '✓ Caja cuadrada' :
+          estado === 'faltante' ? '⚠ Faltante de caja (Resultado Negativo)' : '⚠ Sobrante de caja (Resultado Positivo)'}
+      </td></tr>
+    </table>`;
+}
+function renderCajaIni() {
+  document.getElementById('cajaNombre').value = S.caja.nombre || 'Caja';
+  document.getElementById('cajaTipo').value = S.caja.tipo || 'activo';
+  document.getElementById('cajaLibro').value = S.caja.libro || '';
+  document.getElementById('cajaFisico').value = S.caja.fisico || '';
+  mostrarResumenCaja();
+}
+
+/* ============ 3. BANCO ============ */
+function guardarSaldosBanco() {
+  S.banco.nombre = document.getElementById('bancoNombre').value.trim() || 'Banco';
+  S.banco.tipo = document.getElementById('bancoTipoCuenta').value;
+  S.banco.saldoBanco = num(document.getElementById('bancoSaldoBanco').value);
+  S.banco.saldoLibro = num(document.getElementById('bancoSaldoLibro').value);
+  guardar(); renderBanco();
+}
+function addBanco() {
+  S.banco.nombre = document.getElementById('bancoNombre').value.trim() || 'Banco';
+  S.banco.tipo = document.getElementById('bancoTipoCuenta').value;
+  S.banco.saldoBanco = num(document.getElementById('bancoSaldoBanco').value);
+  S.banco.saldoLibro = num(document.getElementById('bancoSaldoLibro').value);
+  const c = document.getElementById('bancoConcepto').value.trim();
+  const m = num(document.getElementById('bancoMonto').value);
+  const t = document.getElementById('bancoTipo').value;
+  if (!c) return alert('Ingresá concepto');
+  if (m === 0) return alert('Ingresá monto');
+  S.banco.partidas.push({ concepto: c, monto: m, tipo: t });
+  document.getElementById('bancoConcepto').value = '';
+  document.getElementById('bancoMonto').value = '';
+  guardar(); renderBanco();
+}
+function delBanco(i) { S.banco.partidas.splice(i, 1); guardar(); renderBanco(); }
+function renderBanco() {
+  const p = S.banco.partidas;
+  const tb = document.querySelector('#tBanco tbody');
+  tb.innerHTML = p.map((x, i) => `
+    <tr><td>${esc(x.concepto)}</td>
+    <td class="num">${fmt(x.monto)}</td>
+    <td>${x.tipo === 'banco' ? 'Banco' : 'Libros'}</td>
+    <td><button class="del" onclick="delBanco(${i})">×</button></td></tr>`).join('') ||
+    '<tr><td colspan="4" class="vacio">Sin partidas</td></tr>';
+  const ab = p.filter(x => x.tipo === 'banco').reduce((a, x) => a + x.monto, 0);
+  const al = p.filter(x => x.tipo === 'libro').reduce((a, x) => a + x.monto, 0);
+  const bancoAj = S.banco.saldoBanco + ab;
+  const libroAj = S.banco.saldoLibro + al;
+  const dif = bancoAj - libroAj;
+  document.getElementById('resBanco').innerHTML = `
+    <table>
+      <tr><th>Saldo banco ajustado</th><td class="num">${fmt0(bancoAj)}</td></tr>
+      <tr><th>Saldo libros ajustado</th><td class="num">${fmt0(libroAj)}</td></tr>
+      <tr class="total"><td>Diferencia</td>
+        <td class="num ${Math.abs(dif) >= 0.01 ? 'neg' : 'pos'}">${fmt0(dif)}</td></tr>
+      <tr><td colspan="2" style="font-size:12px">
+        ${Math.abs(dif) < 0.01 ? '<span class="pill ok">✓ Conciliado</span>' : '<span class="pill bad">✗ Pendiente de conciliar</span>'}
+      </td></tr>
+    </table>`;
+}
+function renderBancoIni() {
+  document.getElementById('bancoNombre').value = S.banco.nombre || 'Banco';
+  document.getElementById('bancoTipoCuenta').value = S.banco.tipo || 'activo';
+  document.getElementById('bancoSaldoBanco').value = S.banco.saldoBanco || '';
+  document.getElementById('bancoSaldoLibro').value = S.banco.saldoLibro || '';
+  renderBanco();
+}
+
+/* ============ 4. DEUDORES ============ */
+function guardarDeud() {
+  const k = document.getElementById('deudCuentaSel').value;
+  const tipo = document.getElementById('deudTipoCuenta').value;
+  const saldo = num(document.getElementById('deudSaldo').value);
+  S.deud.cuentas[k].tipo = tipo;
+  S.deud.cuentas[k].saldo = saldo;
+  guardar(); renderDeud();
+}
+function borrarDeud(k) {
+  S.deud.cuentas[k].saldo = 0;
+  guardar(); renderDeud();
+}
+function renderDeud() {
+  const sel = document.getElementById('deudCuentaSel');
+  const k = sel.value;
+  const c = S.deud.cuentas[k];
+  document.getElementById('deudTipoCuenta').value = c.tipo || 'activo';
+  document.getElementById('deudSaldo').value = c.saldo || '';
+  const tb = document.querySelector('#tDeud tbody');
+  const filas = Object.keys(S.deud.cuentas).map(kk => {
+    const cc = S.deud.cuentas[kk];
+    if (!cc.saldo || Math.abs(cc.saldo) < 0.005) return '';
+    return `<tr>
+      <td>${esc(cc.nombre)}</td>
+      <td>${esc(TIPOS[cc.tipo] || '')}</td>
+      <td class="num">${fmt(cc.saldo)}</td>
+      <td><button class="del" onclick="borrarDeud('${kk}')">×</button></td>
+    </tr>`;
+  }).join('');
+  tb.innerHTML = filas || '<tr><td colspan="4" class="vacio">Sin cuentas con saldo cargado</td></tr>';
+}
+document.getElementById('deudCuentaSel').addEventListener('change', renderDeud);
+
+/* ============ 5. DEVENGAMIENTOS ============ */
+function addDev() {
+  const t = document.getElementById('devTipo').value;
+  const tc = document.getElementById('devTipoCuenta').value;
+  const c = document.getElementById('devConcepto').value.trim();
+  const m = num(document.getElementById('devMonto').value);
+  if (!c) return alert('Ingresá concepto');
+  if (m === 0) return alert('Ingresá monto');
+  S.dev.items.push({ concepto: c, monto: m, tipo: t, tipoCuenta: tc });
+  document.getElementById('devConcepto').value = '';
+  document.getElementById('devMonto').value = '';
+  guardar(); renderDev();
+}
+function delDev(i) { S.dev.items.splice(i, 1); guardar(); renderDev(); }
+function renderDev() {
+  const tb = document.querySelector('#tDev tbody');
+  tb.innerHTML = S.dev.items.map((x, i) => `
+    <tr><td>${esc(x.concepto)}</td>
+    <td>${x.tipo === 'interes' ? 'Interés' : 'Gasto adel.'}</td>
+    <td class="num">${fmt(x.monto)}</td>
+    <td><button class="del" onclick="delDev(${i})">×</button></td></tr>`).join('') ||
+    '<tr><td colspan="4" class="vacio">Sin devengamientos</td></tr>';
+  const inte = S.dev.items.filter(x => x.tipo === 'interes').reduce((a, x) => a + x.monto, 0);
+  const gast = S.dev.items.filter(x => x.tipo === 'gasto').reduce((a, x) => a + x.monto, 0);
+  document.getElementById('resDev').innerHTML = `
+    <table>
+      <tr><th>Intereses devengados</th><td class="num">${fmt0(inte)}</td></tr>
+      <tr><th>Gastos pagados por adelantado devengados</th><td class="num">${fmt0(gast)}</td></tr>
+    </table>`;
+}
+
+/* ============ 6. PRE-BALANCE (11 columnas) ============ */
+function renderPre() {
+  // Si aún no se cerró Capital manualmente pero hay diferencia en Saldos, la aplicamos como respaldo sin alterar el orden
+  const tieneCapitalEnSaldos = S.saldos.some(s => s.esCapital);
+  const saldosParaPre = [...S.saldos];
+  if (!tieneCapitalEnSaldos && saldosParaPre.length > 0) {
+    const calc = calcularDiferenciaPreviaACapital();
+    if (Math.abs(calc.diff) >= 0.005) {
+      saldosParaPre.push({
+        cuenta: S.capitalNombre || 'Capital',
+        tipo: 'pn',
+        debe: calc.debe,
+        haber: calc.haber,
+        esCapital: true
+      });
+    }
+  }
+
+  // Preservar el orden exacto en que aparecen las cuentas en Saldos Iniciales (con Capital en su lugar y nuevas cuentas debajo)
+  const ordenCuentas = [];
+  const mapa = {};
+  function getCta(cuenta, tipo) {
+    if (!mapa[cuenta]) {
+      mapa[cuenta] = { tipo: tipo || 'activo', iniD: 0, iniH: 0, ajD: 0, ajH: 0 };
+      ordenCuentas.push(cuenta);
+    }
+    return mapa[cuenta];
+  }
+  function addInicial(cuenta, tipo, debe, haber) {
+    const c = getCta(cuenta, tipo);
+    if (tipo) c.tipo = tipo;
+    c.iniD += debe; c.iniH += haber;
+  }
+  function addAjuste(cuenta, tipo, debe, haber) {
+    const c = getCta(cuenta, tipo);
+    if (tipo) c.tipo = tipo;
+    c.ajD += debe; c.ajH += haber;
+  }
+
+  saldosParaPre.forEach(s => addInicial(s.cuenta, s.tipo, num(s.debe), num(s.haber)));
+
+  // Caja: agrega saldo inicial solo si no fue cargada ya en Saldos Iniciales
+  const cajaNombre = S.caja.nombre || 'Caja';
+  const cajaYaEnSaldos = saldosParaPre.some(s => s.cuenta.trim().toLowerCase() === cajaNombre.trim().toLowerCase());
+  if (!cajaYaEnSaldos && Math.abs(S.caja.libro || 0) > 0.005) {
+    addInicial(cajaNombre, S.caja.tipo || 'activo', S.caja.libro || 0, 0);
+  }
+
+  const difCaja = (S.caja.fisico || 0) - (S.caja.libro || 0);
+  if (Math.abs(difCaja) > 0.005) {
+    if (difCaja < 0) {
+      addAjuste('Faltante de Caja', 'resN', Math.abs(difCaja), 0);
+      addAjuste(cajaNombre, S.caja.tipo || 'activo', 0, Math.abs(difCaja));
+    } else {
+      addAjuste(cajaNombre, S.caja.tipo || 'activo', difCaja, 0);
+      addAjuste('Sobrante de Caja', 'resP', 0, difCaja);
+    }
+  }
+
+  // Banco: ajustes conciliatorios sobre libros
+  const bancoNombre = S.banco.nombre || 'Banco';
+  const bancoYaEnSaldos = saldosParaPre.some(s => s.cuenta.trim().toLowerCase() === bancoNombre.trim().toLowerCase());
+  if (!bancoYaEnSaldos && Math.abs(S.banco.saldoLibro || 0) > 0.005) {
+    addInicial(bancoNombre, S.banco.tipo || 'activo', S.banco.saldoLibro || 0, 0);
+  }
+
+  const al = S.banco.partidas.filter(x => x.tipo === 'libro').reduce((a, x) => a + x.monto, 0);
+  if (Math.abs(al) > 0.005) {
+    if (al > 0) {
+      addAjuste(bancoNombre, S.banco.tipo || 'activo', al, 0);
+      addAjuste('Ajustes Conciliación Bancaria', 'resP', 0, al);
+    } else {
+      addAjuste('Gastos / Débitos Bancarios', 'resN', Math.abs(al), 0);
+      addAjuste(bancoNombre, S.banco.tipo || 'activo', 0, Math.abs(al));
+    }
+  }
+
+  Object.values(S.deud.cuentas).forEach(c => {
+    if (c.saldo && Math.abs(c.saldo) > 0.005) {
+      const esAcreedora = (c.tipo === 'pasivo' || c.tipo === 'pn' || c.tipo === 'regA' || c.tipo === 'resP');
+      const debe = esAcreedora ? (c.saldo < 0 ? Math.abs(c.saldo) : 0) : (c.saldo > 0 ? c.saldo : 0);
+      const haber = esAcreedora ? (c.saldo > 0 ? c.saldo : 0) : (c.saldo < 0 ? Math.abs(c.saldo) : 0);
+      addInicial(c.nombre, c.tipo, debe, haber);
+    }
+  });
+
+  S.dev.items.forEach(x => {
+    if (x.tipo === 'interes') {
+      addAjuste('Intereses Devengados (Gasto)', 'resN', x.monto, 0);
+      addAjuste('Intereses a Pagar', x.tipoCuenta || 'pasivo', 0, x.monto);
+    } else {
+      addAjuste('Gastos Devengados', 'resN', x.monto, 0);
+      addAjuste('Gastos Pagados por Adelantado', x.tipoCuenta || 'activo', 0, x.monto);
+    }
+  });
+
+  let T = { iniD: 0, iniH: 0, ajD: 0, ajH: 0, sajD: 0, sajH: 0, act: 0, pasPn: 0, resN: 0, resP: 0 };
+  const filas = ordenCuentas.map(nombre => {
+    const c = mapa[nombre];
+    const saldoIniD = c.iniD;
+    const saldoIniH = c.iniH;
+    const ajDd = Math.max(0, c.ajD - c.ajH);
+    const ajHa = Math.max(0, c.ajH - c.ajD);
+    const neto = (saldoIniD - saldoIniH) + (c.ajD - c.ajH);
+    const saldoAjD = Math.max(0, neto);
+    const saldoAjH = Math.max(0, -neto);
+
+    let act = 0, pasPn = 0, rN = 0, rP = 0;
+    const tipo = c.tipo || 'activo';
+    if (tipo === 'activo') act += saldoAjD;
+    if (tipo === 'pasivo' || tipo === 'pn') pasPn += saldoAjH;
+    if (tipo === 'regA') act -= saldoAjH;
+    if (tipo === 'regP') pasPn -= saldoAjD;
+    if (tipo === 'resN') rN += saldoAjD;
+    if (tipo === 'resP') rP += saldoAjH;
+
+    T.iniD += saldoIniD; T.iniH += saldoIniH;
+    T.ajD  += ajDd;      T.ajH  += ajHa;
+    T.sajD += saldoAjD;  T.sajH += saldoAjH;
+    T.act  += act; T.pasPn += pasPn; T.resN += rN; T.resP += rP;
+
+    return `<tr>
+      <td>${esc(nombre)}</td>
+      <td class="num">${fmt(saldoIniD)}</td>
+      <td class="num">${fmt(saldoIniH)}</td>
+      <td class="num col-sep">${fmt(ajDd)}</td>
+      <td class="num">${fmt(ajHa)}</td>
+      <td class="num col-sep">${fmt(saldoAjD)}</td>
+      <td class="num">${fmt(saldoAjH)}</td>
+      <td class="num col-sep">${fmt(act)}</td>
+      <td class="num">${fmt(pasPn)}</td>
+      <td class="num">${fmt(rN)}</td>
+      <td class="num">${fmt(rP)}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="11" class="vacio">Sin datos cargados</td></tr>';
+
+  const diffBalance = (T.act + T.resN) - (T.pasPn + T.resP);
+  document.getElementById('preContenido').innerHTML = `
+    <table class="pre">
+      <thead>
+        <tr>
+          <th rowspan="2">Cuenta</th>
+          <th colspan="2">Saldo Inicial</th>
+          <th colspan="2" class="col-sep">Ajustes</th>
+          <th colspan="2" class="col-sep">Saldos Ajustados</th>
+          <th rowspan="2" class="col-sep">Activo</th>
+          <th rowspan="2">Pasivo + PN</th>
+          <th rowspan="2">Resultado Negativo</th>
+          <th rowspan="2">Resultado Positivo</th>
+        </tr>
+        <tr>
+          <th>Deudor</th><th>Acreedor</th>
+          <th class="col-sep">Deudor</th><th>Acreedor</th>
+          <th class="col-sep">Deudor</th><th>Acreedor</th>
+        </tr>
+      </thead>
+      <tbody>${filas}</tbody>
+      <tfoot>
+        <tr class="total">
+          <td>Totales</td>
+          <td class="num">${fmt(T.iniD)}</td>
+          <td class="num">${fmt(T.iniH)}</td>
+          <td class="num col-sep">${fmt(T.ajD)}</td>
+          <td class="num">${fmt(T.ajH)}</td>
+          <td class="num col-sep">${fmt(T.sajD)}</td>
+          <td class="num">${fmt(T.sajH)}</td>
+          <td class="num col-sep">${fmt(T.act)}</td>
+          <td class="num">${fmt(T.pasPn)}</td>
+          <td class="num">${fmt(T.resN)}</td>
+          <td class="num">${fmt(T.resP)}</td>
+        </tr>
+        <tr><td colspan="11" style="text-align:right;font-size:12px;padding-top:8px">
+          ${Math.abs(diffBalance) < 0.01
+            ? '<span class="pill ok">✓ Activo + RN = Pasivo + PN + RP</span>'
+            : '<span class="pill bad">✗ Descuadre: ' + fmt0(diffBalance) + '</span>'}
+        </td></tr>
+      </tfoot>
+    </table>
+    <p class="hint" style="margin-top:12px">
+      Columnas: Deudor/Acreedor inicial · Ajustes · Saldos ajustados · Imputación final a Activo, Pasivo+PN, Resultado Negativo y Resultado Positivo.
+    </p>`;
+}
+
+/* ============ RESET ============ */
+function borrarTodo() {
+  if (!confirm('¿Borrar todos los datos cargados?')) return;
+  S = estadoInicial();
+  localStorage.removeItem('contab_prebalance_v6');
+  localStorage.removeItem('contab_prebalance_v5');
+  guardar(); renderAll();
+}
+
+/* ============ INIT ============ */
+function renderAll() {
+  renderIni();
+  renderCajaIni();
+  renderBancoIni();
+  renderDeud();
+  renderDev();
+  renderPre();
+}
+cargar(); renderAll();
+</script>
+</body>
+</html>
